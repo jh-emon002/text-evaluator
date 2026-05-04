@@ -17,7 +17,14 @@ import numpy as np
 from scipy.sparse import hstack
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # allow all origins
+CORS(app)  # keep this
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    return response
 
 # ── Load saved model & vectorizers ───────────────────────────────────────────
 # Make sure these files exist — run the notebook first to generate them.
