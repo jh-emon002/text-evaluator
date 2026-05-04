@@ -1,67 +1,55 @@
-"""
-api_server.py  —  Flask API for Text Evaluator Chrome Extension
-================================================================
-Run this on your machine (or any server) to serve model predictions.
-
-Usage:
-    pip install flask flask-cors joblib scikit-learn scipy
-    python api_server.py
-
-The server will start at http://localhost:5000
-"""
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
-import numpy as np
 from scipy.sparse import hstack
 
 app = Flask(__name__)
-CORS(app)  # keep this
 
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    return response
+# Explicit CORS config — allow everything
+CORS(app, 
+     origins="*",
+     allow_headers=["Content-Type"],
+     methods=["GET", "POST", "OPTIONS"],
+     supports_credentials=False)
 
-# ── Load saved model & vectorizers ───────────────────────────────────────────
-# Make sure these files exist — run the notebook first to generate them.
-print("Loading model and vectorizers...")
+# Load model
+print("Loading model...")
 clf      = joblib.load('classifier.pkl')
 char_vec = joblib.load('char_vectorizer.pkl')
 word_vec = joblib.load('word_vectorizer.pkl')
-#print("Model loaded successfully!")
+print("✅ Model loaded!")
 
-# ── Prediction endpoint ───────────────────────────────────────────────────────
-@app.route('/predict', methods=['POST'])
+# Handle preflight explicitly
+@app.route('/predict', methods=['GET', 'POST', 'OPTIONS'])
 def predict():
-    data = request.get_json()
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response, 200
 
+    data = request.get_json()
     if not data or 'text' not in data:
-        return jsonify({'error': 'Missing "text" field in request body'}), 400
+        return jsonify({'error': 'Missing text field'}), 400
 
     text = str(data['text']).strip()
     if not text:
-        return jsonify({'error': 'Text is empty'}), 400
+        return jsonify({'error': 'Empty text'}), 400
 
-    # Transform using the same fitted vectorizers
     Xc = char_vec.transform([text])
     Xw = word_vec.transform([text])
     X  = hstack([Xc, Xw]).tocsr()
 
-    # Predict class and probabilities
     prediction    = int(clf.predict(X)[0])
     probabilities = clf.predict_proba(X)[0].tolist()
 
     return jsonify({
         'prediction':    prediction,
-        'probabilities': probabilities,   # list of 3 floats e.g. [0.74, 0.19, 0.07]
+        'probabilities': probabilities,
         'text':          text
     })
 
-# ── Health check ──────────────────────────────────────────────────────────────
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'model': 'loaded'})
