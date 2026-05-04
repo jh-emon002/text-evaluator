@@ -17,7 +17,7 @@ import numpy as np
 from scipy.sparse import hstack
 
 app = Flask(__name__)
-CORS(app)   # allow requests from the Chrome extension
+CORS(app, resources={r"/*": {"origins": "*"}})  # allow all origins
 
 # ── Load saved model & vectorizers ───────────────────────────────────────────
 # Make sure these files exist — run the notebook first to generate them.
