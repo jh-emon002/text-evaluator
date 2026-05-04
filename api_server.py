@@ -25,7 +25,7 @@ print("Loading model and vectorizers...")
 clf      = joblib.load('classifier.pkl')
 char_vec = joblib.load('char_vectorizer.pkl')
 word_vec = joblib.load('word_vectorizer.pkl')
-print("✅ Model loaded successfully!")
+#print("Model loaded successfully!")
 
 # ── Prediction endpoint ───────────────────────────────────────────────────────
 @app.route('/predict', methods=['POST'])
